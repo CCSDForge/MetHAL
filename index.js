@@ -3,6 +3,8 @@ const axios = require('axios');
 const { Readable } = require('stream');
 const querystring = require('querystring');
 
+const request = require('request');
+
 /**
  * Build a (sub)query string from search options
  * @param  {Object} options  search options
@@ -28,15 +30,15 @@ function buildQuery (search, operator) {
       switch (p) {
         case '$or':
           subquery = buildQuery(search[p], 'OR');
-          if (subquery) parts.push(subquery);
+        if (subquery) { parts.push(subquery); }
           break;
         case '$and':
           subquery = buildQuery(search[p], 'AND');
-          if (subquery) parts.push(subquery);
+        if (subquery) { parts.push(subquery); }
           break;
         case '$not':
           subquery = buildQuery(search.$not, 'OR');
-          if (subquery) negation = `NOT(${subquery})`;
+        if (subquery) { negation = `NOT(${subquery})`; }
           break;
         default:
           parts.push(`${p}:${search[p].toString()}`);
@@ -70,7 +72,7 @@ exports.find = function (search, options, callback) {
   }
 
   exports.query(search, options, function (err, result) {
-    if (err) return callback(err);
+    if (err) { return callback(err); }
 
     if (result.response && Array.isArray(result.response.docs)) {
       callback(null, result.response.docs);
@@ -130,9 +132,13 @@ exports.query = function (search, options, callback) {
   }
 
   // query link
-  let url = options.core
-    ? `http://ccsdsolrvip.in2p3.fr:8080/solr/${options.core}/select?&wt=json&q=${encodeURIComponent(query)}`
-    : `http://api.archives-ouvertes.fr/search/?wt=json&q=${encodeURIComponent(query)}`;
+//  let url = options.core
+//    ? `http://ccsdsolrvip.in2p3.fr:8080/solr/${options.core}/select?&wt=json&q=${encodeURIComponent(query)}`
+//    : `http://api.archives-ouvertes.fr/search/?wt=json&q=${encodeURIComponent(query)}`;
+
+  let url = (!options.core || options.core == 'hal')
+	? `http://ccsdsolrnodevipint.in2p3.fr:8983/solr/hal/apiselectall?wt=json&q=${encodeURIComponent(query)}`
+	: `http://api.archives-ouvertes.fr/${options.core}?wantDeprecated=true`;
 
   // for convenience, add fields as an alias for fl
   if (options.fields) {
@@ -146,7 +152,7 @@ exports.query = function (search, options, callback) {
 
   // append options to the query (ex: start=1, rows=10)
   for (const p in options) {
-    url += `&${p}=${options[p]}`;
+    if (p !== 'core')  { url += `&${p}=${options[p]}` };
   }
   axios.get(url, requestOptions).then(response => {
     if (response.status !== 200) {

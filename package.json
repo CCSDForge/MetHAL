@@ -1,23 +1,58 @@
 {
-  "name": "@ezpaarse-project/methal",
-  "version": "2.2.0",
+  "_args": [
+    [
+      "@ezpaarse-project/methal@2.1.0",
+      "/sites/ezpaarse/middlewares"
+    ]
+  ],
+  "_from": "@ezpaarse-project/methal@2.1.0",
+  "_id": "@ezpaarse-project/methal@2.1.0",
+  "_inBundle": false,
+  "_integrity": "sha512-zrnI7LWzKgs7DjMoSOwWraGUnfQxMxyOcjFAFw0vyPT7xHZ3YAswRusMBxLulnqNVASeVXsPzNQRoctlIfFBYQ==",
+  "_location": "/@ezpaarse-project/methal",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "version",
+    "registry": true,
+    "raw": "@ezpaarse-project/methal@2.1.0",
+    "name": "@ezpaarse-project/methal",
+    "escapedName": "@ezpaarse-project%2fmethal",
+    "scope": "@ezpaarse-project",
+    "rawSpec": "2.1.0",
+    "saveSpec": null,
+    "fetchSpec": "2.1.0"
+  },
+  "_requiredBy": [
+    "/"
+  ],
+  "_resolved": "https://registry.npmjs.org/@ezpaarse-project/methal/-/methal-2.1.0.tgz",
+  "_spec": "2.1.0",
+  "_where": "/sites/ezpaarse/middlewares",
+  "author": {
+    "name": "ezPAARSE Team"
+  },
+  "bugs": {
+    "url": "https://github.com/ezpaarse-project/MetHAL/issues"
+  },
+  "dependencies": {
+    "axios": "^0.18.0"
+  },
   "description": "Wrapper around the HAL API.",
-  "main": "index.js",
   "engines": {
     "node": ">=4.0.0"
+  },
+  "homepage": "https://github.com/ezpaarse-project/MetHAL#readme",
+  "license": "ISC",
+  "main": "index.js",
+  "name": "@ezpaarse-project/methal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ezpaarse-project/MetHAL.git"
   },
   "scripts": {
     "test": "nyc mocha"
   },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/ezpaarse-project/MetHAL.git"
-  },
-  "author": "ezPAARSE Team",
-  "license": "ISC",
-  "dependencies": {
-    "axios": "^0.18.0"
-  },
+  "version": "2.1.0",
   "devDependencies": {
     "chai": "^4.2.0",
     "mocha": "^6.0.2",
