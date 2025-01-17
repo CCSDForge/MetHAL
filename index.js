@@ -3,13 +3,6 @@ const axios = require('axios');
 const { Readable } = require('stream');
 const querystring = require('querystring');
 
-const request = require("request").defaults({
-  proxy:
-    process.env.http_proxy ||
-    process.env.HTTP_PROXY ||
-    process.env.https_proxy ||
-    process.env.HTTPS_PROXY,
-});
 
 /**
  * Build a (sub)query string from search options
@@ -191,10 +184,12 @@ class ApiHalStream extends Readable {
       q: '*'
     }
   ) {
+    const publicApi = "http://api.archives-ouvertes.fr/search";
+    const privateApiUrl = 'http://ccsdsolrnodevipint.in2p3.fr:8983/solr/hal/apiselectall';
     super({ objectMode: true });
     this.reading = false;
     this.counter = 0;
-    this.urlBase = 'http://api.archives-ouvertes.fr/search';
+    this.urlBase = privateApiUrl;
     this.params = options;
     this.params.sort = 'docid asc';
     this.params.cursorMark = '*';
