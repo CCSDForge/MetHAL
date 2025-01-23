@@ -2,6 +2,8 @@
 const axios = require('axios');
 const { Readable } = require('stream');
 const querystring = require('querystring');
+const config= ezpaarse.config;
+
 
 /**
  * Build a (sub)query string from search options
@@ -11,14 +13,14 @@ const querystring = require('querystring');
  */
 function buildQuery (search, operator) {
   search = search || {};
-  operator = operator || 'AND';
+  operator = operator || "AND";
 
   const parts = [];
   let negation; // NOT subquery
 
   if (Array.isArray(search)) {
     search.forEach(function (subquery) {
-      const part = buildQuery(subquery, 'AND');
+      const part = buildQuery(subquery, "AND");
       if (part) { parts.push(part); }
     });
   } else {
@@ -26,17 +28,17 @@ function buildQuery (search, operator) {
 
     for (const p in search) {
       switch (p) {
-        case '$or':
-          subquery = buildQuery(search[p], 'OR');
-          if (subquery) parts.push(subquery);
+        case "$or":
+          subquery = buildQuery(search[p], "OR");
+        if (subquery) { parts.push(subquery); }
           break;
-        case '$and':
-          subquery = buildQuery(search[p], 'AND');
-          if (subquery) parts.push(subquery);
+        case "$and":
+          subquery = buildQuery(search[p], "AND");
+        if (subquery) { parts.push(subquery); }
           break;
-        case '$not':
-          subquery = buildQuery(search.$not, 'OR');
-          if (subquery) negation = `NOT(${subquery})`;
+        case "$not":
+          subquery = buildQuery(search.$not, "OR");
+        if (subquery) { negation = `NOT(${subquery})`; }
           break;
         default:
           parts.push(`${p}:${search[p].toString()}`);
@@ -45,13 +47,13 @@ function buildQuery (search, operator) {
   }
 
   if (parts.length === 0) {
-    return negation || '';
+    return negation || "";
   }
 
   if (parts.length > 1 || negation) {
-    let query = negation ? `${negation} ${operator} (` : '(';
+    let query = negation ? `${negation} ${operator} (` : "(";
     query += parts.join(`) ${operator} (`);
-    query += ')';
+    query += ")";
     return query;
   }
 
@@ -64,18 +66,18 @@ function buildQuery (search, operator) {
  * @param  {Function} callback(err, docs)
  */
 exports.find = function (search, options, callback) {
-  if (typeof options === 'function') {
+  if (typeof options === "function") {
     callback = options;
     options = {};
   }
 
   exports.query(search, options, function (err, result) {
-    if (err) return callback(err);
+    if (err) { return callback(err); }
 
     if (result.response && Array.isArray(result.response.docs)) {
       callback(null, result.response.docs);
     } else {
-      callback(new Error('unexpected result, documents not found'));
+      callback(new Error("unexpected result, documents not found"));
     }
   });
 };
@@ -89,7 +91,7 @@ exports.find = function (search, options, callback) {
 exports.findOne = function (search, options, callback) {
   options = options || {};
 
-  if (typeof options === 'function') {
+  if (typeof options === "function") {
     callback = options;
     options = {};
   }
@@ -99,10 +101,14 @@ exports.findOne = function (search, options, callback) {
   exports.query(search, options, function (err, result) {
     if (err) { return callback(err); }
 
-    if (result.response && Array.isArray(result.response.docs)) {
+    if (
+        result.response &&
+        Array.isArray(result.response.docs) &&
+        result.response.docs.length === 1
+    ){
       callback(null, result.response.docs[0]);
     } else {
-      callback(new Error('unexpected result, documents not found'));
+      callback(new Error("unexpected result, documents not found"));
     }
   });
 };
@@ -116,12 +122,13 @@ exports.findOne = function (search, options, callback) {
 exports.query = function (search, options, callback) {
   options = options || {};
 
-  if (typeof options === 'function') {
+  if (typeof options === "function") {
     callback = options;
     options = {};
   }
 
-  const query = (typeof search === 'string' ? search : buildQuery(search, 'AND') || '*:*');
+  const query =
+    typeof search === "string" ? search : buildQuery(search, "AND") || "*:*";
 
   const requestOptions = {};
   if (options.hasOwnProperty('proxy')) {
@@ -130,9 +137,20 @@ exports.query = function (search, options, callback) {
   }
 
   // query link
-  let url = options.core
-    ? `http://ccsdsolrvip.in2p3.fr:8080/solr/${options.core}/select?&wt=json&q=${encodeURIComponent(query)}`
-    : `http://api.archives-ouvertes.fr/search/?wt=json&q=${encodeURIComponent(query)}`;
+
+  const publicApi     = config.publicHalCoreApiUrl  || "http://api.archives-ouvertes.fr";
+  const privateApiUrl = config.privateHalCoreApiUrl || null;
+
+  let url ;
+  if (options.core === 'hal') {
+    if (privateApiUrl) {
+      url = `${privateApiUrl}?wt=json&q=${encodeURIComponent(query)}`
+    } else {
+      url = `${publicApi}/search?wt=json&q=${encodeURIComponent(query)}`;
+    }
+  } else {
+    url = `${publicApi}/${options.core}?${options.arg}`
+  }
 
   // for convenience, add fields as an alias for fl
   if (options.fields) {
@@ -141,12 +159,12 @@ exports.query = function (search, options, callback) {
   }
   // for convenience, convert fl to string if it's an array
   if (Array.isArray(options.fl)) {
-    options.fl = options.fl.join(',');
+    options.fl = options.fl.join(",");
   }
 
   // append options to the query (ex: start=1, rows=10)
   for (const p in options) {
-    url += `&${p}=${options[p]}`;
+    if (p !== 'core')  { url += `&${p}=${options[p]}` };
   }
   axios.get(url, requestOptions).then(response => {
     if (response.status !== 200) {
@@ -166,10 +184,12 @@ class ApiHalStream extends Readable {
       q: '*'
     }
   ) {
+    const publicApi = "http://api.archives-ouvertes.fr/search";
+    const privateApiUrl = 'http://ccsdsolrnodevipint.in2p3.fr:8983/solr/hal/apiselectall';
     super({ objectMode: true });
     this.reading = false;
     this.counter = 0;
-    this.urlBase = 'http://api.archives-ouvertes.fr/search';
+    this.urlBase = privateApiUrl;
     this.params = options;
     this.params.sort = 'docid asc';
     this.params.cursorMark = '*';
