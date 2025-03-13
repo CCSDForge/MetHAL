@@ -2,6 +2,8 @@
 const axios = require('axios');
 const { Readable } = require('stream');
 const querystring = require('querystring');
+const config= ezpaarse.config;
+
 
 
 /**
@@ -137,9 +139,8 @@ exports.query = function (search, options, callback) {
 
   // query link
 
-  const publicApi = "http://api.archives-ouvertes.fr";
-  // const privateApiUrl = options.privateApiUrl || null;
-  const privateApiUrl = 'http://ccsdsolrnodevipint.in2p3.fr:8983/solr/hal/apiselectall';
+  const publicApi     = config.publicHalCoreApiUrl  || "http://api.archives-ouvertes.fr";
+  const privateApiUrl = config.privateHalCoreApiUrl || null;
 
   let url ;
   if (options.core === 'hal') {
