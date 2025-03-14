@@ -224,3 +224,4 @@ class ApiHalStream extends Readable {
 }
 
 exports.Stream = ApiHalStream;
+
