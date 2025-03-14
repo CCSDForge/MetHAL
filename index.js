@@ -5,7 +5,6 @@ const querystring = require('querystring');
 const config= ezpaarse.config;
 
 
-
 /**
  * Build a (sub)query string from search options
  * @param  {Object} options  search options
@@ -225,3 +224,4 @@ class ApiHalStream extends Readable {
 }
 
 exports.Stream = ApiHalStream;
+
