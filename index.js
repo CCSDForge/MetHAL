@@ -1,11 +1,9 @@
 'use strict';
+const axios = require('axios');
+const { Readable } = require('stream');
+const querystring = require('querystring');
+const config= ezpaarse.config;
 
-var request = require('request').defaults({
-  proxy: process.env.http_proxy ||
-         process.env.HTTP_PROXY ||
-         process.env.https_proxy ||
-         process.env.HTTPS_PROXY
-});
 
 /**
  * Build a (sub)query string from search options
@@ -13,50 +11,52 @@ var request = require('request').defaults({
  * @param  {String} operator operator to use between options, ie. AND/OR
  * @return {String}          solr compliant query string
  */
-function buildQuery(search, operator) {
-  search   = search   || {};
-  operator = operator || 'AND';
+function buildQuery (search, operator) {
+  search = search || {};
+  operator = operator || "AND";
 
-  var parts = [];
-  var negation; // NOT subquery
+  const parts = [];
+  let negation; // NOT subquery
 
   if (Array.isArray(search)) {
     search.forEach(function (subquery) {
-      var part = buildQuery(subquery, 'AND');
+      const part = buildQuery(subquery, "AND");
       if (part) { parts.push(part); }
     });
   } else {
-    var subquery;
+    let subquery;
 
-    for (var p in search) {
+    for (const p in search) {
       switch (p) {
-        case '$or':
-          subquery = buildQuery(search[p], 'OR');
-          if (subquery) { parts.push(subquery); }
+        case "$or":
+          subquery = buildQuery(search[p], "OR");
+        if (subquery) { parts.push(subquery); }
           break;
-        case '$and':
-          subquery = buildQuery(search[p], 'AND');
-          if (subquery) { parts.push(subquery); }
+        case "$and":
+          subquery = buildQuery(search[p], "AND");
+        if (subquery) { parts.push(subquery); }
           break;
-        case '$not':
-          subquery = buildQuery(search.$not, 'OR');
-          if (subquery) { negation = 'NOT(' + subquery + ')'; }
+        case "$not":
+          subquery = buildQuery(search.$not, "OR");
+        if (subquery) { negation = `NOT(${subquery})`; }
           break;
         default:
-          parts.push(p + ':' + search[p].toString());
+          parts.push(`${p}:${search[p].toString()}`);
       }
     }
   }
 
   if (parts.length === 0) {
-    return negation || '';
+    return negation || "";
   }
-  
+
   if (parts.length > 1 || negation) {
-    var query = negation ? negation + operator + '(' : '(';
-    return (query += parts.join(')' + operator + '(') + ')');
+    let query = negation ? `${negation} ${operator} (` : "(";
+    query += parts.join(`) ${operator} (`);
+    query += ")";
+    return query;
   }
-  
+
   return parts[0];
 }
 
@@ -65,20 +65,19 @@ function buildQuery(search, operator) {
  * @param  {Object}   options
  * @param  {Function} callback(err, docs)
  */
-exports.find = function (core, search, options, callback) {
-
-  if (typeof options === 'function') {
+exports.find = function (search, options, callback) {
+  if (typeof options === "function") {
     callback = options;
-    options  = {};
+    options = {};
   }
 
-  exports.query(core, search, options, function (err, result) {
+  exports.query(search, options, function (err, result) {
     if (err) { return callback(err); }
 
     if (result.response && Array.isArray(result.response.docs)) {
       callback(null, result.response.docs);
     } else {
-      callback(new Error('unexpected result, documents not found'));
+      callback(new Error("unexpected result, documents not found"));
     }
   });
 };
@@ -89,23 +88,27 @@ exports.find = function (core, search, options, callback) {
  * @param  {Object}   options
  * @param  {Function} callback(err, docs)
  */
-exports.findOne = function (core, search, options, callback) {
+exports.findOne = function (search, options, callback) {
   options = options || {};
 
-  if (typeof options === 'function') {
+  if (typeof options === "function") {
     callback = options;
-    options  = {};
+    options = {};
   }
 
   options.rows = 1;
 
-  exports.query(core, search, options, function (err, result) {
+  exports.query(search, options, function (err, result) {
     if (err) { return callback(err); }
 
-    if (result.response && Array.isArray(result.response.docs)) {
+    if (
+        result.response &&
+        Array.isArray(result.response.docs) &&
+        result.response.docs.length === 1
+    ){
       callback(null, result.response.docs[0]);
     } else {
-      callback(new Error('unexpected result, documents not found'));
+      callback(new Error("unexpected result, documents not found"));
     }
   });
 };
@@ -116,25 +119,38 @@ exports.findOne = function (core, search, options, callback) {
  * @param  {Object}   options  proxy and query options (sort, rows, fl...)
  * @param  {Function} callback(err, result)
  */
-exports.query = function (core, search, options, callback) {
+exports.query = function (search, options, callback) {
   options = options || {};
 
-  if (typeof options === 'function') {
+  if (typeof options === "function") {
     callback = options;
-    options  = {};
+    options = {};
   }
 
-  var query = (typeof search === 'string' ? search : buildQuery(search, 'AND') || '*:*');
+  const query =
+    typeof search === "string" ? search : buildQuery(search, "AND") || "*:*";
 
-  var requestOptions = {};
+  const requestOptions = {};
   if (options.hasOwnProperty('proxy')) {
     requestOptions.proxy = options.proxy;
     delete options.proxy;
   }
 
   // query link
-  //var url = 'http://api.archives-ouvertes.fr/search/?wt=json&q=' + encodeURIComponent(query);
-  var url = 'http://ccsdsolrvip.in2p3.fr:8080/solr/'+ core +'/select?&wt=json&q=' + encodeURIComponent(query);
+
+  const publicApi     = config.publicHalCoreApiUrl  || "http://api.archives-ouvertes.fr";
+  const privateApiUrl = config.privateHalCoreApiUrl || null;
+
+  let url ;
+  if (options.core === 'hal') {
+    if (privateApiUrl) {
+      url = `${privateApiUrl}?wt=json&q=${encodeURIComponent(query)}`
+    } else {
+      url = `${publicApi}/search?wt=json&q=${encodeURIComponent(query)}`;
+    }
+  } else {
+    url = `${publicApi}/${options.core}?${options.arg}`
+  }
 
   // for convenience, add fields as an alias for fl
   if (options.fields) {
@@ -143,37 +159,68 @@ exports.query = function (core, search, options, callback) {
   }
   // for convenience, convert fl to string if it's an array
   if (Array.isArray(options.fl)) {
-    options.fl = options.fl.join(',');
+    options.fl = options.fl.join(",");
   }
 
   // append options to the query (ex: start=1, rows=10)
-  for (var p in options) {
-    url += '&' + p + '=' + options[p];
+  for (const p in options) {
+    if (p !== 'core')  { url += `&${p}=${options[p]}` };
   }
-
-  request.get(url, requestOptions, function (err, res, body) {
-    if (err) { return callback(err); }
-
-    if (res.statusCode !== 200) {
-      return callback(new Error('unexpected status code : ' + res.statusCode));
+  axios.get(url, requestOptions).then(response => {
+    if (response.status !== 200) {
+      return callback(new Error(`unexpected status code : ${response.statusCode}`));
     }
 
-    var info;
-
-    try {
-      info = JSON.parse(body);
-    } catch(e) {
-      return callback(e);
-    }
-
-    // if an error is thown, the json should contain the status code and a detailed message
-    if (info.error) {
-      var error = new Error(info.error.msg || 'got an unknown error from the API');
-      error.code = info.error.code;
-      return callback(error) ;
-    }
-
-    callback(null , info);
-  });
+    callback(null, response.data);
+  }).catch(error => callback(error));
 };
 
+/**
+ * Cursor strength to scroll through thousands of results encapsulated in a stream
+ */
+class ApiHalStream extends Readable {
+  constructor (
+    options = {
+      q: '*'
+    }
+  ) {
+    const publicApi = "http://api.archives-ouvertes.fr/search";
+    const privateApiUrl = 'http://ccsdsolrnodevipint.in2p3.fr:8983/solr/hal/apiselectall';
+    super({ objectMode: true });
+    this.reading = false;
+    this.counter = 0;
+    this.urlBase = privateApiUrl;
+    this.params = options;
+    this.params.sort = 'docid asc';
+    this.params.cursorMark = '*';
+    this.params.rows = 1000;
+  }
+
+  _read () {
+    if (this.reading) return false;
+    this.reading = true;
+    const self = this;
+    function getMoreUntilDone (url) {
+      axios.get(url).then(response => {
+        response.data.response.docs.map((doc) => {
+          self.counter++;
+          self.push(doc);
+        });
+        if (self.counter < response.data.response.numFound) {
+          self.params.cursorMark = response.data.nextCursorMark;
+          const nextUrl = `${self.urlBase}/?${querystring.stringify(self.params)}`;
+          getMoreUntilDone(nextUrl);
+        } else {
+          self.push(null);
+          self.counter = 0;
+          self.reading = false;
+        }
+      }).catch(error => {
+        self.emit('error', error);
+      });
+    }
+    getMoreUntilDone(`${this.urlBase}/?${querystring.stringify(this.params)}`);
+  }
+}
+
+exports.Stream = ApiHalStream;

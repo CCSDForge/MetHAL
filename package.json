@@ -1,52 +1,26 @@
 {
-  "_args": [
-    [
-      "methal@2.0.2",
-      "/home/sdenoux/Projects/ezpaarse-brandnew"
-    ]
-  ],
-  "_from": "methal@2.0.2",
-  "_id": "methal@2.0.2",
-  "_inBundle": false,
-  "_integrity": "sha1-v6D9GehJkHnbY99z78QkhKohmQ0=",
-  "_location": "/methal",
-  "_phantomChildren": {},
-  "_requested": {
-    "type": "version",
-    "registry": true,
-    "raw": "methal@2.0.2",
-    "name": "methal",
-    "escapedName": "methal",
-    "rawSpec": "2.0.2",
-    "saveSpec": null,
-    "fetchSpec": "2.0.2"
-  },
-  "_requiredBy": [
-    "/"
-  ],
-  "_resolved": "https://registry.npmjs.org/methal/-/methal-2.0.2.tgz",
-  "_spec": "2.0.2",
-  "_where": "/home/sdenoux/Projects/ezpaarse-brandnew",
-  "author": {
-    "name": "ezPAARSE Team"
-  },
-  "bugs": {
-    "url": "https://github.com/aloukili/MetHAL/issues"
-  },
-  "dependencies": {
-    "request": "^2.57.0"
-  },
+  "name": "@ezpaarse-project/methal",
+  "version": "2.2.0",
   "description": "Wrapper around the HAL API.",
-  "homepage": "https://github.com/aloukili/MetHAL#readme",
-  "license": "ISC",
   "main": "index.js",
-  "name": "methal",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/aloukili/MetHAL.git"
+  "engines": {
+    "node": ">=4.0.0"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "nyc mocha"
   },
-  "version": "2.0.2"
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ezpaarse-project/MetHAL.git"
+  },
+  "author": "ezPAARSE Team",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^0.18.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.0.2",
+    "nyc": "^13.3.0"
+  }
 }
